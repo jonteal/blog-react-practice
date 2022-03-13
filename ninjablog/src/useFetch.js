@@ -9,7 +9,12 @@ const useFetch = (url) => {
 
 
     useEffect(() => {
-        fetch(url)
+
+        // Creating a constant that we can then associate to the fetch function in order to stop it when we do the cleanup
+        const abortCont = new AbortController();
+
+        // We pass url as the first argument for the fetch, and the signal: abortCont.signal associates the abortCont with this signal
+        fetch(url, { signal: abortCont.signal })
             .then(res => {
                 if(!res.ok) {
                     throw Error('could not fetch the data for that resource')
@@ -22,9 +27,18 @@ const useFetch = (url) => {
                 setError(null);
             })
             .catch(err => {
-                setIsPending(false);
-                setError(err.message);
+                if (err.name === 'AbortError') {
+                    console.log('fetch aborted')
+                } else {
+                    setIsPending(false);
+                    setError(err.message);
+                }
+                
             })
+
+            // useEffect Cleanup function aborts with whatever fetch it is associated with
+            return() => abortCont.abort();
+
     }, [url]);
 
     return { data, isPending, error };
